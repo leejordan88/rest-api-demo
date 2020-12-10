@@ -10,8 +10,7 @@ import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
-@Builder @NoArgsConstructor @AllArgsConstructor
-@Data
+@Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class EventDto {
     @NotEmpty
     private String name;
@@ -32,4 +31,5 @@ public class EventDto {
     private int maxPrice; // (optional)
     @Min(0)
     private int limitOfEnrollment;
+
 }
