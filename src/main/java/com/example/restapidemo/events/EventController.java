@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.net.URI;
+import java.util.Optional;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 
@@ -60,5 +61,39 @@ public class EventController {
                 assembler.toModel(events, e -> new EventResource(e));
         entityModels.add(Link.of("/docs/index.html#resources-query-events").withRel("profile"));
         return ResponseEntity.ok(entityModels);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity getEvent(@PathVariable("id") Integer id) {
+        Optional<Event> optionalEvent = eventRepository.findById(id);
+        if (optionalEvent.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        Event event = optionalEvent.get();
+        EventResource eventResource = new EventResource(event);
+        eventResource.add(Link.of("/docs/index.html#resources-events-get").withRel("profile"));
+        return ResponseEntity.ok(eventResource);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity updateEvent(@PathVariable("id") Integer id,
+                                      @RequestBody EventDto eventDto,
+                                      Errors errors) {
+        Optional<Event> optionalEvent = eventRepository.findById(id);
+        if (optionalEvent.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        if (errors.hasErrors()) {
+            return ResponseEntity.badRequest().body(ErrorsResource.modelOf(errors));
+        }
+
+        Event event = optionalEvent.get();
+        modelMapper.map(eventDto, event);
+        Event savedEvent = eventRepository.save(event);
+
+        EventResource eventResource = new EventResource(savedEvent);
+        eventResource.add(Link.of("/docs/index.html#resources-events-update").withRel("profile"));
+        return ResponseEntity.ok(eventResource);
     }
 }

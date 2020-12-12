@@ -1,21 +1,13 @@
 package com.example.restapidemo.events;
 
-import com.example.restapidemo.common.RestDocsConfig;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.restapidemo.common.BaseControllerTest;
 import org.hamcrest.Matchers;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
 import java.time.LocalDateTime;
@@ -30,18 +22,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@AutoConfigureRestDocs
-@Import(RestDocsConfig.class)
-@ActiveProfiles("test")
-public class EventControllerTest {
-
-    @Autowired
-    MockMvc mockMvc;
-
-    @Autowired
-    ObjectMapper objectMapper;
+public class EventControllerTest extends BaseControllerTest {
 
     @Autowired
     EventRepository eventRepository;
@@ -162,7 +143,7 @@ public class EventControllerTest {
     }
 
     @Test
-    void queryEvent() throws Exception {
+    void queryEvents() throws Exception {
         IntStream.range(0, 30).forEach(this::generateEvent);
 
         ResultActions result = mockMvc.perform(get("/api/events")
@@ -177,12 +158,45 @@ public class EventControllerTest {
                 .andExpect(jsonPath("_links.profile").exists());
 
         result.andDo(document("query-events"));
-
     }
 
-    private void generateEvent(int index) {
+    @Test
+    void getEvent() throws Exception {
+        Event event = generateEvent(1);
+
+        mockMvc.perform(get("/api/events/{id}", 1))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("id").exists())
+                .andExpect(jsonPath("name").value(event.getName()))
+                .andExpect(jsonPath("_links.self").exists())
+                .andExpect(jsonPath("_links.profile").exists())
+        ;
+    }
+
+    @Test
+    void updateEvent() throws Exception {
+        Event event = generateEvent(1);
+
+        EventDto updateEvent = EventDto.builder()
+                .name("updated events")
+                .build();
+
+        mockMvc.perform(put("/api/events/{id}", 1)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateEvent)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("name").value(updateEvent.getName()))
+                .andExpect(jsonPath("_links.self").exists())
+                .andExpect(jsonPath("_links.profile").exists())
+                ;
+    }
+
+    private Event generateEvent(int index) {
         Event event = Event.builder()
-                .name("Spring + index")
+                .id(index)
+                .name("Event" + index)
                 .description("Test Event")
                 .beginEnrollmentDateTime(LocalDateTime.of(2020, 10, 12, 11, 7))
                 .closeEnrollmentDateTime(LocalDateTime.of(2020, 10, 13, 11, 7))
@@ -193,6 +207,6 @@ public class EventControllerTest {
                 .limitOfEnrollment(100)
                 .location("강남역 D2 스타텁 팩토리")
                 .build();
-        eventRepository.save(event);
+        return eventRepository.save(event);
     }
 }
